@@ -263,13 +263,18 @@
   var ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var android = /Android/.test(navigator.userAgent);
   var deferred = null;
-  function showInstall() {
-    if (standalone || store.get('install_closed') || !$('settings').hidden) return; // 登録画面の上には重ねない
+  // force：自分で開いたとき（登録画面のボタン、アドレスの #install）。閉じたことがあっても出す
+  function showInstall(force) {
+    if (!force && (standalone || store.get('install_closed') || !$('settings').hidden)) return; // 登録画面の上には重ねない
+    $('settings').hidden = true;
     $('install').hidden = false;
-    $('install-ios').hidden = !ios;
-    $('install-android').hidden = !android || !!deferred;
+    var unknown = !ios && !android; // パソコンなど機種が分からないとき：両方の手順を出す
+    $('install-ios').hidden = !(ios || unknown);
+    $('install-android').hidden = !(android || unknown) || !!deferred;
     $('install-btn').hidden = !deferred;
+    $('install-done').hidden = !standalone;
   }
+  $('open-install').onclick = function () { showInstall(true); };
   // Android の Chrome（https のとき）は、ボタン1つで追加できる
   window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; showInstall(); });
   $('install-btn').onclick = function () {
@@ -277,8 +282,12 @@
     deferred.prompt();
     deferred.userChoice.then(function () { deferred = null; $('install').hidden = true; });
   };
-  $('install-close').onclick = function () { store.set('install_closed', '1'); $('install').hidden = true; };
-  if (ios || android) showInstall();
+  $('install-close').onclick = function () {
+    store.set('install_closed', '1'); $('install').hidden = true;
+    if (!store.get('employee') || !store.get('report_to')) openSettings(); // 登録がまだなら登録画面に戻す
+  };
+  if (location.hash === '#install') showInstall(true); // 二次元コードなどで、案内を開いた状態で配る
+  else if (ios || android) showInstall();
 
   // 電波がないときでも開けるように（https で公開したときに働く）
   if ('serviceWorker' in navigator && window.isSecureContext) {
