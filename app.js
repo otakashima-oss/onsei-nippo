@@ -8,7 +8,8 @@
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var MAX_SEC = 90;
-  var SCOPE = 'https://www.googleapis.com/auth/gmail.send';
+  var SEND = 'https://www.googleapis.com/auth/gmail.send';
+  var SCOPE = SEND + ' email'; // email：ログインしたアカウントを覚えて、2回目からアカウント選びを飛ばすため
   var store = {
     get: function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
     set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
@@ -106,9 +107,10 @@
   });
 
   // ---------- Google ログイン（Gmail の送信の許可） ----------
-  // 許可（アクセストークン）は1時間ほど使える。携帯の中（sessionStorage）に期限つきで覚えておく
+  // 許可（アクセストークン）は1時間ほど使える。携帯の中（localStorage）に期限つきで覚え、開き直しても使う
+  // 2回目からは、覚えたアカウント（login_hint）と prompt なしで頼むので、ログイン画面は一瞬開いて自動で閉じることが多い
   var token = null, tokenExp = 0, tokenClient = null;
-  try { var t = JSON.parse(sessionStorage.getItem('gmail_token') || 'null'); if (t && t.exp > Date.now()) { token = t.token; tokenExp = t.exp; } } catch (e) {}
+  try { var t = JSON.parse(localStorage.getItem('gmail_token') || 'null'); if (t && t.exp > Date.now()) { token = t.token; tokenExp = t.exp; } } catch (e) {}
   function hasToken() { return token && tokenExp - 60000 > Date.now(); }
   function getToken() {
     if (hasToken()) return Promise.resolve(token);
@@ -118,14 +120,25 @@
       tokenClient = tokenClient || google.accounts.oauth2.initTokenClient({ client_id: window.GOOGLE_CLIENT_ID, scope: SCOPE, callback: function () {} });
       tokenClient.callback = function (r) {
         if (r.error || !r.access_token) return reject(new Error('Google のログイン・送信の許可ができませんでした（' + (r.error || '不明') + '）。'));
-        if (google.accounts.oauth2.hasGrantedAllScopes && !google.accounts.oauth2.hasGrantedAllScopes(r, SCOPE)) return reject(new Error('「メールの送信」にチェックを入れて許可してください。'));
+        if (google.accounts.oauth2.hasGrantedAllScopes && !google.accounts.oauth2.hasGrantedAllScopes(r, SEND)) return reject(new Error('「メールの送信」にチェックを入れて許可してください。'));
         token = r.access_token; tokenExp = Date.now() + Number(r.expires_in || 3600) * 1000;
-        try { sessionStorage.setItem('gmail_token', JSON.stringify({ token: token, exp: tokenExp })); } catch (e) {}
+        try { localStorage.setItem('gmail_token', JSON.stringify({ token: token, exp: tokenExp })); } catch (e) {}
+        rememberAccount(token);
         resolve(token);
       };
       tokenClient.error_callback = function (e) { reject(new Error(e && e.type === 'popup_closed' ? 'Google のログイン画面が閉じられました。もう一度送信してください。' : 'Google のログイン画面を開けませんでした。')); };
-      tokenClient.requestAccessToken({ prompt: store.get('google_ok') ? '' : 'consent' });
+      var opt = { prompt: store.get('google_ok') ? '' : 'consent' };
+      if (store.get('google_email')) opt.login_hint = store.get('google_email');
+      tokenClient.requestAccessToken(opt);
     });
+  }
+
+  // ログインしたアカウントのアドレスを覚える（次から login_hint に使う）
+  function rememberAccount(tk) {
+    if (store.get('google_email')) return;
+    fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { 'Authorization': 'Bearer ' + tk } })
+      .then(function (r) { return r.ok ? r.json() : {}; })
+      .then(function (u) { if (u.email) store.set('google_email', u.email); }, function () {});
   }
 
   // ---------- 日報メールを作る（件名・本文は mail-worker.mjs が読む形） ----------
@@ -157,7 +170,7 @@
         body: JSON.stringify({ raw: mime(r) })
       }).then(function (res) {
         if (res.ok) { store.set('google_ok', '1'); return; }
-        if (res.status === 401) { token = null; tokenExp = 0; try { sessionStorage.removeItem('gmail_token'); } catch (e) {} }
+        if (res.status === 401) { token = null; tokenExp = 0; store.del('gmail_token'); }
         return res.json().catch(function () { return {}; }).then(function (j) {
           var e = new Error(res.status === 401 ? 'Google の許可が切れました。もう一度送信してください。' : '送信できませんでした（' + res.status + (j.error && j.error.message ? '：' + j.error.message : '') + '）。');
           e.keep = true; throw e;
