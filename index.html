@@ -15,6 +15,7 @@
 <style>
   :root { --main: #0b4f9c; --main-dark: #083a74; --rec: #d93025; --ok: #1e7b3a; --bg: #f3f6fa; --text: #1f2933; --sub: #5b6875; --line: #d5dee8; --white: #fff; }
   * { box-sizing: border-box; }
+  html { font-size: 17.5px; } /* 文字の基準の大きさ（2026-11-26 に 16px から約1ポイント大きくした） */
   body { margin: 0; font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-text-size-adjust: 100%; }
   header { background: var(--main-dark); color: var(--white); padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top)); position: sticky; top: 0; z-index: 5; }
   .install ol { margin: 6px 0 0; padding-left: 1.4em; font-size: .9rem; }
@@ -22,10 +23,10 @@
   main { max-width: 560px; margin: 0 auto; padding: 16px 16px 48px; }
   .card { scroll-margin-top: 64px; background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
   .card h2 { font-size: 1rem; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
-  .num { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; background: var(--main); color: var(--white); align-items: center; justify-content: center; font-size: .9rem; flex: none; }
+  .num { display: inline-flex; width: 28px; height: 28px; border-radius: 50%; background: var(--main); color: var(--white); align-items: center; justify-content: center; font-size: .9rem; flex: none; }
   .hint { font-size: .85rem; color: var(--sub); margin: 0 0 10px; }
   label { display: block; font-weight: 700; font-size: .9rem; margin: 12px 0 4px; }
-  input, textarea { width: 100%; font: inherit; font-size: 16px; padding: 10px; border: 1px solid #b7c3cf; border-radius: 8px; background: var(--white); color: var(--text); }
+  input, textarea { width: 100%; font: inherit; font-size: 1rem; padding: 10px; border: 1px solid #b7c3cf; border-radius: 8px; background: var(--white); color: var(--text); }
   textarea { min-height: 160px; resize: vertical; }
   .rec { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 12px; }
   .rec-btn { width: 112px; height: 112px; border-radius: 50%; border: 0; background: var(--rec); color: var(--white); font: inherit; font-weight: 700; font-size: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
