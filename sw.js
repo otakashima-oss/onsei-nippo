@@ -1,6 +1,6 @@
 // 電波がないときでもアプリを開けるようにする（https で公開したときに働く）
 // 電波があるときは常に新しいファイルを取りに行き、取れないときだけ保存しておいたものを使う
-const CACHE = "nippo-v5";
+const CACHE = "nippo-v6";
 const FILES = ["./", "index.html", "app.js", "config.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {

@@ -19,9 +19,13 @@
   if (!store.get('report_to') && window.REPORT_TO) store.set('report_to', window.REPORT_TO);
 
   function show(text, kind) {
+    // 画面の上に重ねて出す。押すと消える。うまくいったお知らせは数秒で消える
     var m = $('msg'); m.textContent = text; m.className = 'msg show ' + (kind || 'info');
-    m.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    clearTimeout(msgTimer);
+    if (kind === 'good') msgTimer = setTimeout(hideMsg, 5000);
   }
+  var msgTimer = null;
+  $('msg').onclick = function () { hideMsg(); };
   function hideMsg() { $('msg').className = 'msg'; }
 
   // ---------- 社員名・送り先 ----------
@@ -31,8 +35,11 @@
     $('employee').value = store.get('employee');
     $('report-to').value = store.get('report_to');
     $('google-hint').hidden = false;
-    $('settings').hidden = false; $('settings').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('settings-close').hidden = !(store.get('employee') && store.get('report_to')); // 登録が済むまでは閉じられない
+    $('install').hidden = true;
+    $('settings').hidden = false;
   }
+  $('settings-close').onclick = function () { $('settings').hidden = true; };
   $('open-settings').onclick = openSettings;
   $('save-settings').onclick = function () {
     var name = $('employee').value.trim();
@@ -41,6 +48,7 @@
     if (!validMail(to)) { show('日報の送り先のメールアドレスを確かめてください。', 'err'); return; }
     store.set('employee', name); store.set('report_to', to); showWho(); $('settings').hidden = true;
     show(name + ' さんで登録しました。', 'good');
+    if (ios || android) showInstall();
   };
   showWho();
   if (!store.get('employee') || !store.get('report_to')) openSettings();
@@ -53,7 +61,7 @@
 
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var rec = null, recording = false, startAt = 0, tick = null, base = '';
-  if (!SR) { $('rec').hidden = true; $('timer').hidden = true; }
+  if (!SR) { $('rec').hidden = true; $('timer').hidden = true; $('no-speech').hidden = false; }
 
   function setTimer() {
     var s = Math.floor((Date.now() - startAt) / 1000);
@@ -256,7 +264,7 @@
   var android = /Android/.test(navigator.userAgent);
   var deferred = null;
   function showInstall() {
-    if (standalone || store.get('install_closed')) return;
+    if (standalone || store.get('install_closed') || !$('settings').hidden) return; // 登録画面の上には重ねない
     $('install').hidden = false;
     $('install-ios').hidden = !ios;
     $('install-android').hidden = !android || !!deferred;
